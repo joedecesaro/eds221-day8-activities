@@ -1,0 +1,120 @@
+---
+title: "day_8_activities"
+author: "Joe DeCesaro"
+date: "8/18/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(janitor)
+library(patchwork)
+library(ggrepel)
+library(gghighlight)
+library(paletteer)
+library(ggExtra)
+library(ggbeeswarm)
+library(gapminder)
+library(directlabels)
+
+```
+
+## Task 1: Do your data viz worst
+
+```{r}
+space_launches <- read_csv(here("data", "space_launches.csv"))
+
+space_launches_year_count <- space_launches %>% 
+  group_by(launch_year) %>% 
+  summarize(launches_per_year = n())
+```
+
+```{r}
+space_launches <- ggplot(space_launches_year_count, aes(x = launch_year, y = launches_per_year)) +
+  geom_line(color = "pink", size = 15) + 
+  geom_point(shape = 3) +
+  labs(x = "Year",
+       y = "Number of Launches",
+       title = "SPACE") +
+  theme(
+    plot.background = element_rect(fill = "cyan"),
+    panel.grid = element_line(color = "red4", 
+                              size = 10), 
+    axis.title.x = element_text(face = "bold.italic",
+                                family = "NewCenturySchoolbook",
+                                angle = 40),
+    axis.title.y = element_text(face = "italic",
+                                color = "orange",
+                                angle = 180,
+                                size = 20)) + 
+  scale_color_gradientn(colors = c("red","orange","yellow"))
+
+
+space_launches
+```
+
+## Task 2: Wrangling practice with the SF Greenhouse Gas data
+```{r}
+san_fran <- read_csv(here("data", "San_Francisco_Communitywide_Greenhouse_Gas_Inventory.csv"))
+
+san_fran <- san_fran %>% 
+  clean_names()
+```
+1. Create a summary table of total annual greenhouse gas emissions (only from Emissions_mtCO2e column) by sector_general
+```{r}
+tot_annual_sector <- san_fran %>% 
+  group_by(sector_general, calendar_year) %>% 
+  summarize(total_annual_ghg_emissions = sum(emissions_mt_co2e, na.rm = TRUE))
+```
+
+2. Create a summary table of total annual greenhouse gas emissions (only from Emissions_mtCO2e column) by year and commodity type
+```{r}
+tot_annual_comm <- san_fran %>% 
+  group_by(commodity_type, calendar_year) %>% 
+  summarize(total_annual_ghg_emissions = sum(emissions_mt_co2e, na.rm = TRUE))
+```
+
+3. Create a subset of the data that only contains observations from 2005 on, only for observations where Sector_Detail2 contains the pattern “PG&E”, then limit to columns Calendar_Year, Sector_Detail2 and Emissions_mtCO2e.
+```{r}
+san_fran_2005 <- san_fran %>% 
+  filter(calendar_year >= 2005) %>% 
+  filter(str_detect(sector_detail2, "PG&E")) %>% 
+  select(calendar_year,sector_detail2,emissions_mt_co2e)
+```
+
+## Task 3: Do your data viz best
+```{r}
+tot_sector <- tot_annual_sector %>% 
+  filter(calendar_year >= 2015)
+
+ggplot(tot_sector, aes(x = calendar_year, y = total_annual_ghg_emissions, color = sector_general)) + 
+  geom_line(aes(group = sector_general), 
+            show.legend = FALSE) +
+  geom_text(data = tot_sector %>% 
+              filter(calendar_year == last(calendar_year)), aes(label = sector_general,
+                                                                x = calendar_year + 0.4,
+                                                                y = total_annual_ghg_emissions + 45000,
+                                                                color = sector_general),
+            show.legend = FALSE,) +
+  theme(
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "grey"),
+    panel.background = element_blank(),
+    axis.title.y = element_text(angle = 0)
+  ) +
+  xlim(2015, 2019.7) +
+  labs(
+    x = "Year",
+    y= "Total Annual 
+    GHG Emissions 
+    (mtCO2e)",
+    title = "Total Annual GHG Emissions in Megatons of CO2 Equivalents 
+    from 2015 - 2019 by each Sector"
+  ) 
+
+ 
+
+```
+
